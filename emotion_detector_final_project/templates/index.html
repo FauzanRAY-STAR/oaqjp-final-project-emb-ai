@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detector</title>
+    <style>
+        :root { color-scheme: light; font-family: Arial, sans-serif; }
+        body { margin: 0; background: #f3f6fa; color: #182230; }
+        main { max-width: 760px; margin: 8vh auto; padding: 32px; }
+        .panel { background: white; border: 1px solid #dce3ed; border-radius: 16px;
+                 padding: 28px; box-shadow: 0 10px 30px #22334412; }
+        h1 { margin-top: 0; }
+        p { line-height: 1.55; color: #4a5565; }
+        label { display: block; margin: 20px 0 8px; font-weight: 700; }
+        textarea { box-sizing: border-box; width: 100%; min-height: 120px; padding: 12px;
+                   border: 1px solid #bac5d4; border-radius: 8px; font: inherit; }
+        button { margin-top: 14px; padding: 11px 18px; border: 0; border-radius: 8px;
+                 background: #175cd3; color: white; font-size: 1rem; cursor: pointer; }
+        button:disabled { opacity: .6; cursor: wait; }
+        #result { white-space: pre-wrap; margin-top: 20px; padding: 16px;
+                  background: #f7f9fc; border-radius: 8px; min-height: 24px; }
+        #result.error { color: #b42318; }
+        .hint { font-size: .9rem; }
+    </style>
+</head>
+<body>
+<main>
+    <section class="panel">
+        <h1>Emotion Detector</h1>
+        <p>Enter an English sentence to estimate anger, disgust, fear, joy, and sadness.</p>
+        <form id="emotion-form">
+            <label for="textToAnalyze">Text to analyze</label>
+            <textarea id="textToAnalyze" name="textToAnalyze"
+                      placeholder="Example: I am really happy today."></textarea>
+            <button id="submit-button" type="submit">Analyze emotion</button>
+        </form>
+        <div id="result" role="status" aria-live="polite">Your result will appear here.</div>
+        <p class="hint">The result depends on the availability of the Watson NLP service.</p>
+    </section>
+</main>
+<script>
+    const form = document.getElementById("emotion-form");
+    const textBox = document.getElementById("textToAnalyze");
+    const resultBox = document.getElementById("result");
+    const submitButton = document.getElementById("submit-button");
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const text = textBox.value.trim();
+        resultBox.classList.remove("error");
+        if (!text) {
+            resultBox.textContent = "Invalid input! Please enter text to analyze.";
+            resultBox.classList.add("error");
+            return;
+        }
+
+        submitButton.disabled = true;
+        resultBox.textContent = "Analyzing...";
+        try {
+            const query = new URLSearchParams({textToAnalyze: text, format: "json"});
+            const response = await fetch(`/emotionDetector?${query.toString()}`);
+            const body = await response.text();
+            if (!response.ok) {
+                throw new Error(body || `Request failed (${response.status})`);
+            }
+            const data = JSON.parse(body);
+            resultBox.textContent =
+                `anger: ${data.anger}\ndisgust: ${data.disgust}\nfear: ${data.fear}` +
+                `\njoy: ${data.joy}\nsadness: ${data.sadness}` +
+                `\n\nDominant emotion: ${data.dominant_emotion}`;
+        } catch (error) {
+            resultBox.textContent = error.message;
+            resultBox.classList.add("error");
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
